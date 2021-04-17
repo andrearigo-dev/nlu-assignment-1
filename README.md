@@ -1,5 +1,7 @@
 # NLU First Assignment
 Repository for the first assignment of the Natural Language Understanding course
+
+Student: Andrea Rigo
 # Requirements
 `Python`, `SpaCy` and `Jupyter Notebooks`
 # Test the code
