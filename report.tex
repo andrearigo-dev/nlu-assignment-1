@@ -1,0 +1,47 @@
+\documentclass[a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{minted}
+
+\title{\textbf{NLU First Assignment}}
+\author{Andrea Rigo}
+\date{April 2021}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+The first things I do are:
+    \begin{itemize}
+        \item Initializing an example sentence
+        \item Initialize the \textit{en\_core\_web\_sm} SpaCy model and parse the sentence
+        \item Use \textit{displacy} to visualize the dependency relations of the sentence, so that I have a reference to better debug the code
+    \end{itemize}
+
+\section{Extract a path of dependency relations from the ROOT to a token}
+The \textit{token\_path\_to\_root(token, doc)} function gets as input a token and a doc object and returns the token's path to the root. To do that the code keeps track of the dependency relations while it jumps from the initial token to its head, sets the head as the current token and repeats the process. It goes upward in the dependency graph, until it finds the root:
+\begin{minted}{python}
+ while not current.dep_ == 'ROOT':
+        path.insert(0, current.dep_)
+        current = current.head
+\end{minted}
+
+Then the \textit{sent\_paths\_to\_root(sent)} function iterates over the tokens of the sentence in input and fetches its path to the root calling the previous function.
+
+\section{Extract subtree of dependents given a token}
+The function iterates over the tokens of the sentence and calls the \textit{token.subtree} property to get its subtree and converts it to a list. The initial plan was to use a dictionary to associate each subtree to its toke, but this way couldn't handle sentences where a word appeared more than one time. The subtree would have been overwritten. So using a list comprehension I packed all the subtrees in list of lists:
+\mint{python}|[list(token.subtree) for token in nlp(sent)]|
+
+\section{Check if a given list of tokens (segment of a sentence) forms a subtree}
+The \textit{is\_subtree(sent, words)} function searches the doc for tokens corresponding to the strings received in input. To do that it compares each doc's token text \textit{tk.text} with each word \textit{w} in a list comprehension:
+\mint{python}|tokens = sorted([tk for tk in doc for w in words if tk.text == w])|
+
+If the tokens form a subtree then that subtree has its root in one of the tokens. This means that I have to compute only the subtrees rooted in the input tokens instead of searching in all the subtrees of the doc. The subtrees are computed using the \textit{token.subtree} property. Because a token's subtree is a tree made of the token and all and only its descendants, the subtree I'm looking for will contain all and only the tokens in input. So, the code simply checks if the token list is equal to one of the token's subtrees. To check if two lists are equal, because it's an element-wise comparison, they have to be ordered the same way. So the code orders both of them with \textit{sorted}.
+
+\section{Identify head of a span, given its tokens}
+The \textit{head\_of\_span(words)} function receives in input a sequence of words, assumed to be in single string (otherwise a simple \textit{string.join(' ')} would be enough), and computes the head of the corresponding span. To convert the sequence into a span the code simply parses it, obtaining a doc object. Then it extracts the first (and only) sentence of the doc using the function \textit{next()}. The sentence is a span object, so the code returns its root using the \textit{span.root} property.
+
+\section{Extract sentence subject, direct object and indirect object spans}
+The function \textit{extract\_deps\_span(sent)} creates a dictionary of lists, one list for each required dependency. Then it iterates over the required dependencies and each token in the doc obtained by parsing the input sentence. When it finds a token with the right dependency, it uses the \textit{token.subtree} property to get its subtree, which is its span, and adds it the associated list.
+
+\end{document}
